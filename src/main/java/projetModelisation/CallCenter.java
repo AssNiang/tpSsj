@@ -1,5 +1,6 @@
 package projetModelisation;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import umontreal.ssj.randvar.ExponentialGen;
 import umontreal.ssj.randvar.RandomVariateGen;
@@ -19,13 +20,13 @@ public class CallCenter {
             int T
     ) {
         this.genArrivalTime1 = new ExponentialGen(new MRG32k3a(), lambda1);
-        this.genArrivalTime2 = new ExponentialGen(new MRG32k3a(), lambda2);;
-        this.genServiceTimeC1A1 = new ExponentialGen(new MRG32k3a(), mu11);;
-        this.genServiceTimeC1A2 = new ExponentialGen(new MRG32k3a(), mu12);;
-        this.genServiceTimeC2A1 = new ExponentialGen(new MRG32k3a(), mu21);;
-        this.genServiceTimeC2A2 = new ExponentialGen(new MRG32k3a(), mu22);;
-        this.genPatienceTime1 = new ExponentialGen(new MRG32k3a(), nu1);;
-        this.genPatienceTime2 = new ExponentialGen(new MRG32k3a(), nu2);;
+        this.genArrivalTime2 = new ExponentialGen(new MRG32k3a(), lambda2);
+        this.genServiceTimeC1A1 = new ExponentialGen(new MRG32k3a(), mu11);
+        this.genServiceTimeC1A2 = new ExponentialGen(new MRG32k3a(), mu12);
+        this.genServiceTimeC2A1 = new ExponentialGen(new MRG32k3a(), mu21);
+        this.genServiceTimeC2A2 = new ExponentialGen(new MRG32k3a(), mu22);
+        this.genPatienceTime1 = new ExponentialGen(new MRG32k3a(), nu1);
+        this.genPatienceTime2 = new ExponentialGen(new MRG32k3a(), nu2);
         this.nAgents1 = n1;
         this.nAgents2 = n2;
         this.goodWaitingTimesThreshold = s;
@@ -40,8 +41,8 @@ public class CallCenter {
 
     RandomVariateGen genPatienceTime1, genPatienceTime2;
 
-    LinkedList<Call> waitingCalls1 = new LinkedList<Call>();
-    LinkedList<Call> waitingCalls2 = new LinkedList<Call>();
+    LinkedList<Call> listWaitingCalls1 = new LinkedList<Call>();
+    LinkedList<Call> listWaitingCalls2 = new LinkedList<Call>();
 
     int nAgents1, nAgents2;
     LinkedList<Agent> listFreeAgents1 = new LinkedList<Agent>();
@@ -64,7 +65,7 @@ public class CallCenter {
 
         int agenType;
         Double listOccupationRates[] = new Double[nbDays];
-        int nbCallResponded1, nbCallResponded2;
+        ArrayList<Call> CallResponded1, CallResponded2;
 
         public Agent() {
         }
@@ -76,7 +77,7 @@ public class CallCenter {
         double arrivalTime;
         double serviceTime;
         double patienceTime;
-        int agentWhoRespondedType;
+        Agent agentWhoResponded;
 
         public Call() {
         }
@@ -84,9 +85,146 @@ public class CallCenter {
 
     private class Arrival extends Event {
 
+        int type;
+
+        public Arrival(int type) {
+            this.type = type;
+        }
+
         @Override
         public void actions() {
-            //...
+            if (this.type == 1) {
+                new Arrival(type).schedule(genArrivalTime1.nextDouble());
+
+                Call call = new Call();
+                call.callType = this.type;
+                call.arrivalTime = sim.time();
+                call.patienceTime = genPatienceTime1.nextDouble();
+
+                new Abandon(call).schedule(call.patienceTime);
+
+                switch (getAgent(call.callType)) {
+                    case 1 -> {
+                        // an agent 1 took the call
+                        Agent agent1 = (Agent) listFreeAgents1.removeFirst();
+                        listBusyAgents1.add(agent1);
+                        agent1.CallResponded1.add(call);
+                        call.agentWhoResponded = agent1;
+                        call.serviceTime = genServiceTimeC1A1.nextDouble();
+                        // schedule the end of the call at  call.serviceTime (pass it the call id??)
+                        nGoodWaitingTimes1++;
+                    }
+                    case 2 -> {
+                        // an agent 2 took the call
+                        Agent agent2 = (Agent) listFreeAgents2.removeFirst();
+                        listBusyAgents2.add(agent2);
+                        agent2.CallResponded1.add(call);
+                        call.agentWhoResponded = agent2;
+                        call.serviceTime = genServiceTimeC1A2.nextDouble();
+                        // schedule the end of the call at  call.serviceTime
+                        nGoodWaitingTimes1++;
+                    }
+                    default -> // no agent can take the call
+                        listWaitingCalls1.addLast(call);
+                }
+            } else if (this.type == 2) {
+                new Arrival(type).schedule(genArrivalTime2.nextDouble());
+
+                Call call = new Call();
+                call.callType = this.type;
+                call.arrivalTime = sim.time();
+                call.patienceTime = genPatienceTime2.nextDouble();
+
+                new Abandon(call).schedule(call.patienceTime);
+
+                switch (getAgent(call.callType)) {
+                    case 1 -> {
+                        // an agent 1 took the call
+                        Agent agent1 = (Agent) listFreeAgents1.removeFirst();
+                        listBusyAgents1.add(agent1);
+                        agent1.CallResponded2.add(call);
+                        call.agentWhoResponded = agent1;
+                        call.serviceTime = genServiceTimeC2A1.nextDouble();
+                        // schedule the end of the call at  call.serviceTime (pass it the call id??)
+                        nGoodWaitingTimes2++;
+                    }
+                    case 2 -> {
+                        // an agent 2 took the call
+                        Agent agent2 = (Agent) listFreeAgents2.removeFirst();
+                        listBusyAgents2.add(agent2);
+                        agent2.CallResponded2.add(call);
+                        call.agentWhoResponded = agent2;
+                        call.serviceTime = genServiceTimeC2A2.nextDouble();
+                        // schedule the end of the call at  call.serviceTime
+                        nGoodWaitingTimes2++;
+                    }
+                    default -> // no agent can take the call
+                        listWaitingCalls2.addLast(call);
+                }
+            }
+        }
+
+    }
+
+    private int getAgent(int i) {
+        //to implement by Mrs MBAYE
+        return i;
+    }
+
+    class Abandon extends Event {
+
+        Call call;
+
+        public Abandon(Call call) {
+            this.call = call;
+        }
+
+        @Override
+        public void actions() {
+            if (listWaitingCalls1.contains(call)) {
+                listWaitingCalls1.remove(call);
+                // on ne nous demande pas le temps d'attente moyenne
+                nAbandons1++;
+            } else if (listWaitingCalls2.contains(call)) {
+                listWaitingCalls2.remove(call);
+                nAbandons2++;
+            }
+        }
+    }
+    
+    int getCall(){
+        return 0;
+    }
+
+    class EndOfCall extends Event {
+
+        Call call;
+
+        public EndOfCall(Call call) {
+            this.call = call;
+        }
+
+        @Override
+        public void actions() {
+            Agent agent = call.agentWhoResponded;
+            agent.listOccupationRates[0] += call.serviceTime; // on est en train de gérer le 1er jour
+            // we can maybe remove the call
+
+            switch (agent.agenType) {
+                case 1 -> {
+                    listBusyAgents1.remove(agent);
+                    listFreeAgents1.addLast(agent);
+
+                    break;
+                }
+                case 2 -> {
+                    listBusyAgents2.remove(agent);
+                    listFreeAgents2.addLast(agent);
+                    break;
+                }
+
+            }
+
         }
 
     }
