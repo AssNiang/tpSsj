@@ -166,9 +166,9 @@ public class CallCenter {
 
     }
 
-    private int getAgent(int i) {
+    private int getAgent(int callType) {
         //to implement by Mrs MBAYE
-        return i;
+        return callType;
     }
 
     class Abandon extends Event {
@@ -191,8 +191,9 @@ public class CallCenter {
             }
         }
     }
-    
-    int getCall(){
+
+    private int getAnotherCall(int agentType) {
+        // to implement later...
         return 0;
     }
 
@@ -214,7 +215,23 @@ public class CallCenter {
                 case 1 -> {
                     listBusyAgents1.remove(agent);
                     listFreeAgents1.addLast(agent);
-
+                    
+                    if(listWaitingCalls1.size() > 0){
+                        // cela veut dire que tous les agents 1 sont occupes
+                        // donc il prend la tete de file
+                        // on genere le serviceTime
+                        // on programme la fin du call dans call.serviceTime
+                        // on verifie si le temps d'attente est < s pour le garder (1)
+                    }else if(listWaitingCalls2.size() > 0){
+                        // cela veut dire que tous les agents 2 sont occupes
+                        // donc il prend la tete de file
+                        // on genere le serviceTime
+                        // on programme la fin du call dans call.serviceTime
+                        // on verifie si le temps d'attente est < s pour le garder (2)
+                    } else {
+                        // cela veut dire qu'aucun appel n'est en attente
+                        // on le remet a la queue des agents 1 libres.
+                    }
                     break;
                 }
                 case 2 -> {
