@@ -166,9 +166,24 @@ public class CallCenter {
 
     }
 
-    private int getAgent(int callType) {
-        //to implement by Mrs MBAYE
-        return callType;
+    private int getAgent(int callType) {   //implement getAgent
+        if (callType == 1) {
+            if (!listFreeAgents1.isEmpty()) {
+                return 1;
+            } 
+            else if (!listFreeAgents2.isEmpty()) {
+                return 2;
+            }
+        } 
+        else if (callType == 2) {
+            if (!listFreeAgents2.isEmpty()) {
+                return 2;
+            } 
+            else if (!listFreeAgents1.isEmpty()) {
+                return 1;
+            }
+        }
+        return 0;
     }
 
     class Abandon extends Event {
@@ -214,7 +229,7 @@ public class CallCenter {
             switch (agent.agenType) {
                 case 1 -> {
                     listBusyAgents1.remove(agent);
-                    listFreeAgents1.addLast(agent);
+                    //listFreeAgents1.addLast(agent);
                     
                     if(listWaitingCalls1.size() > 0){
                         // cela veut dire que tous les agents 1 sont occupes
@@ -236,7 +251,7 @@ public class CallCenter {
                 }
                 case 2 -> {
                     listBusyAgents2.remove(agent);
-                    listFreeAgents2.addLast(agent);
+                    //listFreeAgents2.addLast(agent);
                     break;
                 }
 
