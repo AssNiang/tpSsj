@@ -10,30 +10,6 @@ import umontreal.ssj.stat.Tally;
 
 public class CallCenter {
 
-    public CallCenter(
-            double lambda1, double lambda2,
-            double mu11, double mu12, double mu21, double mu22,
-            double nu1, double nu2,
-            int n1, int n2,
-            int s,
-            int n,
-            int T
-    ) {
-        this.genArrivalTime1 = new ExponentialGen(new MRG32k3a(), lambda1);
-        this.genArrivalTime2 = new ExponentialGen(new MRG32k3a(), lambda2);
-        this.genServiceTimeC1A1 = new ExponentialGen(new MRG32k3a(), mu11);
-        this.genServiceTimeC1A2 = new ExponentialGen(new MRG32k3a(), mu12);
-        this.genServiceTimeC2A1 = new ExponentialGen(new MRG32k3a(), mu21);
-        this.genServiceTimeC2A2 = new ExponentialGen(new MRG32k3a(), mu22);
-        this.genPatienceTime1 = new ExponentialGen(new MRG32k3a(), nu1);
-        this.genPatienceTime2 = new ExponentialGen(new MRG32k3a(), nu2);
-        this.nAgents1 = n1;
-        this.nAgents2 = n2;
-        this.goodWaitingTimesThreshold = s;
-        this.nbDays = n;
-        this.nbHoursPerDay = T;
-    }
-
     RandomVariateGen genArrivalTime1, genArrivalTime2;
 
     RandomVariateGen genServiceTimeC1A1, genServiceTimeC1A2,
@@ -60,6 +36,30 @@ public class CallCenter {
 
     int nbDays; // number of days
     int nbHoursPerDay; // number of hours per day (T)
+
+    public CallCenter(
+            double lambda1, double lambda2,
+            double mu11, double mu12, double mu21, double mu22,
+            double nu1, double nu2,
+            int n1, int n2,
+            int s,
+            int n,
+            int T
+    ) {
+        this.genArrivalTime1 = new ExponentialGen(new MRG32k3a(), lambda1);
+        this.genArrivalTime2 = new ExponentialGen(new MRG32k3a(), lambda2);
+        this.genServiceTimeC1A1 = new ExponentialGen(new MRG32k3a(), mu11);
+        this.genServiceTimeC1A2 = new ExponentialGen(new MRG32k3a(), mu12);
+        this.genServiceTimeC2A1 = new ExponentialGen(new MRG32k3a(), mu21);
+        this.genServiceTimeC2A2 = new ExponentialGen(new MRG32k3a(), mu22);
+        this.genPatienceTime1 = new ExponentialGen(new MRG32k3a(), nu1);
+        this.genPatienceTime2 = new ExponentialGen(new MRG32k3a(), nu2);
+        this.nAgents1 = n1;
+        this.nAgents2 = n2;
+        this.goodWaitingTimesThreshold = s;
+        this.nbDays = n;
+        this.nbHoursPerDay = T;
+    }
 
     private class Agent {
 
@@ -111,7 +111,9 @@ public class CallCenter {
                         agent1.CallResponded1.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC1A1.nextDouble();
-                        // schedule the end of the call at  call.serviceTime (pass it the call id??)
+                        
+                        new EndOfCall(call).schedule(call.serviceTime);
+                        
                         nGoodWaitingTimes1++;
                     }
                     case 2 -> {
@@ -121,7 +123,9 @@ public class CallCenter {
                         agent2.CallResponded1.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC1A2.nextDouble();
-                        // schedule the end of the call at  call.serviceTime
+                        
+                        new EndOfCall(call).schedule(call.serviceTime);
+                        
                         nGoodWaitingTimes1++;
                     }
                     default -> // no agent can take the call
@@ -145,7 +149,9 @@ public class CallCenter {
                         agent1.CallResponded2.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC2A1.nextDouble();
-                        // schedule the end of the call at  call.serviceTime (pass it the call id??)
+                        
+                        new EndOfCall(call).schedule(call.serviceTime);
+                        
                         nGoodWaitingTimes2++;
                     }
                     case 2 -> {
@@ -155,7 +161,9 @@ public class CallCenter {
                         agent2.CallResponded2.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC2A2.nextDouble();
-                        // schedule the end of the call at  call.serviceTime
+                        
+                        new EndOfCall(call).schedule(call.serviceTime);
+                        
                         nGoodWaitingTimes2++;
                     }
                     default -> // no agent can take the call
@@ -166,20 +174,17 @@ public class CallCenter {
 
     }
 
-    private int getAgent(int callType) {   //implement getAgent
+    private int getAgent(int callType) {
         if (callType == 1) {
             if (!listFreeAgents1.isEmpty()) {
                 return 1;
-            } 
-            else if (!listFreeAgents2.isEmpty()) {
+            } else if (!listFreeAgents2.isEmpty()) {
                 return 2;
             }
-        } 
-        else if (callType == 2) {
+        } else if (callType == 2) {
             if (!listFreeAgents2.isEmpty()) {
                 return 2;
-            } 
-            else if (!listFreeAgents1.isEmpty()) {
+            } else if (!listFreeAgents1.isEmpty()) {
                 return 1;
             }
         }
@@ -229,15 +234,15 @@ public class CallCenter {
             switch (agent.agenType) {
                 case 1 -> {
                     listBusyAgents1.remove(agent);
-                    //listFreeAgents1.addLast(agent);
                     
-                    if(listWaitingCalls1.size() > 0){
+
+                    if (!listWaitingCalls1.isEmpty()) {
                         // cela veut dire que tous les agents 1 sont occupes
-                        // donc il prend la tete de file
+                        // donc il prend la tete de file des appels de type 1
                         // on genere le serviceTime
                         // on programme la fin du call dans call.serviceTime
                         // on verifie si le temps d'attente est < s pour le garder (1)
-                    }else if(listWaitingCalls2.size() > 0){
+                    } else if (!listWaitingCalls2.isEmpty()) {
                         // cela veut dire que tous les agents 2 sont occupes
                         // donc il prend la tete de file
                         // on genere le serviceTime
@@ -246,6 +251,7 @@ public class CallCenter {
                     } else {
                         // cela veut dire qu'aucun appel n'est en attente
                         // on le remet a la queue des agents 1 libres.
+                        //listFreeAgents1.addLast(agent);
                     }
                     break;
                 }
