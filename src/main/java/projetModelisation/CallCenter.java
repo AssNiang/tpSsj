@@ -28,8 +28,8 @@ public class CallCenter {
     LinkedList<Agent> listFreeAgents1 = new LinkedList<>();
     LinkedList<Agent> listFreeAgents2 = new LinkedList<>();
     /*
-    LinkedList<Agent> listBusyAgents1 = new LinkedList<Agent>();
-    LinkedList<Agent> listBusyAgents2 = new LinkedList<Agent>();
+     * LinkedList<Agent> listBusyAgents1 = new LinkedList<Agent>();
+     * LinkedList<Agent> listBusyAgents2 = new LinkedList<Agent>();
      */
     int nArrivals1, nArrivals2;
     TallyStore arrivalsCollector1 = new TallyStore();
@@ -63,8 +63,7 @@ public class CallCenter {
             int T,
             int n,
             int s1,
-            int s2
-    ) {
+            int s2) {
         this.genArrivalTime1 = new ExponentialGen(new MRG32k3a(), lambda1);
         this.genArrivalTime2 = new ExponentialGen(new MRG32k3a(), lambda2);
         this.genServiceTimeC1A1 = new ExponentialGen(new MRG32k3a(), mu11);
@@ -81,6 +80,14 @@ public class CallCenter {
 
         this.nbFreeAgents1ToAnswerCall2Threshold = s1;
         this.nbFreeAgents2ToAnswerCall1Threshold = s2;
+        
+        
+        for (int i = 0; i < nAgents1; i++) {
+            listAgents1.add(i, new Agent(1));
+        }
+        for (int i = 0; i < nAgents2; i++) {
+            listAgents2.add(i, new Agent(2));
+        }
 
         // start the simulation
         simulate();
@@ -124,6 +131,7 @@ public class CallCenter {
         @Override
         public void actions() {
             if (this.type == 1) {
+                
                 new Arrival(type).schedule(genArrivalTime1.nextDouble() * MINUTE);
 
                 nArrivals1++;
@@ -139,7 +147,7 @@ public class CallCenter {
                     case 1 -> {
                         // an agent 1 took the call
                         Agent agent1 = (Agent) listFreeAgents1.removeFirst();
-                        //listBusyAgents1.add(agent1);
+                        // listBusyAgents1.add(agent1);
                         agent1.callsResponded1.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC1A1.nextDouble() * MINUTE;
@@ -151,7 +159,7 @@ public class CallCenter {
                     case 2 -> {
                         // an agent 2 took the call
                         Agent agent2 = (Agent) listFreeAgents2.removeFirst();
-                        //listBusyAgents2.add(agent2);
+                        // listBusyAgents2.add(agent2);
                         agent2.callsResponded1.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC1A2.nextDouble() * MINUTE;
@@ -179,7 +187,7 @@ public class CallCenter {
                     case 1 -> {
                         // an agent 1 took the call
                         Agent agent1 = (Agent) listFreeAgents1.removeFirst();
-                        //listBusyAgents1.add(agent1);
+                        // listBusyAgents1.add(agent1);
                         agent1.callsResponded2.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC2A1.nextDouble() * MINUTE;
@@ -191,7 +199,7 @@ public class CallCenter {
                     case 2 -> {
                         // an agent 2 took the call
                         Agent agent2 = (Agent) listFreeAgents2.removeFirst();
-                        //listBusyAgents2.add(agent2);
+                        // listBusyAgents2.add(agent2);
                         agent2.callsResponded2.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC2A2.nextDouble() * MINUTE;
@@ -247,10 +255,10 @@ public class CallCenter {
     }
 
     /*
-    private int getAnotherCall(int agentType) {
-        // to implement later...
-        return 0;
-    }
+     * private int getAnotherCall(int agentType) {
+     * // to implement later...
+     * return 0;
+     * }
      */
     class EndOfCall extends Event {
 
@@ -263,12 +271,11 @@ public class CallCenter {
         @Override
         public void actions() {
             Agent agent = this.call.agentWhoResponded;
-            agent.listOccupationRates.set(dayIndex, agent.listOccupationRates.get(dayIndex) + this.call.serviceTime); // on est en train de gérer un jour donné.
-            // we can maybe remove the call
+            agent.listOccupationRates.set(dayIndex, agent.listOccupationRates.get(dayIndex) + this.call.serviceTime);             
 
             switch (agent.agentType) {
                 case 1 -> {
-                    //listBusyAgents1.remove(agent);
+                    // listBusyAgents1.remove(agent);
 
                     if (!listWaitingCalls1.isEmpty()) {
                         // cela veut dire que tous les agents 1 sont occupes
@@ -308,7 +315,7 @@ public class CallCenter {
                     break;
                 }
                 case 2 -> {
-                    //listBusyAgents2.remove(agent);
+                    // listBusyAgents2.remove(agent);
 
                     if (!listWaitingCalls2.isEmpty()) {
                         // cela veut dire que tous les agents 2 sont occupes
@@ -361,12 +368,7 @@ public class CallCenter {
         new Arrival(1).schedule(genArrivalTime1.nextDouble() * MINUTE);
         new Arrival(2).schedule(genArrivalTime2.nextDouble() * MINUTE);
 
-        for (int i = 0; i < nAgents1; i++) {
-            listAgents1.add(i, new Agent(1));
-        }
-        for (int i = 0; i < nAgents2; i++) {
-            listAgents2.add(i, new Agent(2));
-        }
+        
 
         listFreeAgents1.addAll(listAgents1);
         listFreeAgents2.addAll(listAgents2);
@@ -423,6 +425,72 @@ public class CallCenter {
 
     }
 
+    // ------------- other methods ---------------------
+    
+    
+
+    public double[] getNbAbandonsByCallType(int callType) {
+        return (callType == 1) ? abandonsCollector1.getArray() : abandonsCollector2.getArray();
+    }
+
+    public double getNbAbandonsByCallTypeAndByDay(int callType, int day) {
+        return getNbAbandonsByCallType(callType)[day - 1];
+    }
+
+    public double[] getNbGoodWaitingTimesByCallType(int callType) {
+        return (callType == 1) ? goodWaitingTimesCollector1.getArray() : goodWaitingTimesCollector2.getArray();
+    }
+
+    public double getNbGoodWaitingTimesByCallTypeAndByDay(int callType, int day) {
+        return getNbGoodWaitingTimesByCallType(callType)[day - 1];
+    }
+    
+    public double[] getOccupationRatesByAgentAndType(int agentType, int numAgent){
+        LinkedList<Agent> agents = (agentType==1)?listAgents1:listAgents2;
+        return agents.get(numAgent-1).listOccupationRates.stream().mapToDouble(Double::doubleValue).toArray();
+    }
+
+    public void printOccupationRatesAverage(int agentType) {
+
+        LinkedList<Agent> listAgents = (agentType == 1) ? listAgents1 : listAgents2;
+
+        double sum = 0.0;
+        double moy;
+
+        System.out.println("Liste des taux d'occupation moyens des agents de type " + agentType);
+        for (int i = 0; i < listAgents.size(); i++) {
+
+            moy = listAgents.get(i).listOccupationRates
+                    .stream()
+                    .mapToDouble(a -> a)
+                    .average()
+                    .getAsDouble();
+            sum += moy;
+            System.out.println("- Agent " + (i + 1) + " : " + moy +" - C1: "+listAgents.get(i).callsResponded1.size()+ " - C2: "+listAgents.get(i).callsResponded2.size());
+        }
+        System.out.println("-- moyenne du groupe " + agentType + " : " + sum / listAgents.size());
+    }
+    
+    // print histograms
+    
+    private void printHistogram(double[] array) {
+        
+        for (int i = 0; i < array.length; i++) {
+            String label = i + " : ";
+            System.out.println(label + convertToStars(array[i]));
+        }
+    }
+
+    private String convertToStars(double num) {
+        StringBuilder builder = new StringBuilder();
+        for (int j = 0; j < num; j++) {
+            builder.append('*');
+        }
+        return builder.toString();
+    }
+    
+    
+    // --------------- main ----------------------
     public static void main(String args[]) {
         // TODO code application logic here
         double lambda1 = 6.0, lambda2 = 0.6;
@@ -448,64 +516,39 @@ public class CallCenter {
         System.out.println(">> Rapport du nombre d'abandons de type 2 par jour : ");
         System.out.println(cc.abandonsCollector2.report());
 
-        System.out.println(">> Rapport du nombre d'appels de type 1 répondus en moins de " + s + " secondes par jour : ");
+        System.out
+                .println(">> Rapport du nombre d'appels de type 1 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector1.report());
-        System.out.println(">> Rapport du nombre d'appels de type 2 répondus en moins de " + s + " secondes par jour : ");
+        System.out
+                .println(">> Rapport du nombre d'appels de type 2 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector2.report());
 
         cc.printOccupationRatesAverage(1);
         cc.printOccupationRatesAverage(2);
-        
+
         int day = 200;
-        System.out.println("> Jour "+day+" :");
-        System.out.println(">> nb abandons de type 1 : "+ cc.getNbAbandonsByCallTypeAndByDay(1, day));
-        System.out.println(">> nb abandons de type 2 : "+ cc.getNbAbandonsByCallTypeAndByDay(2, day));
-        System.out.println(">> nb appels de temps d'attente < 20s de type 1 : "+ cc.getNbGoodWaitingTimesByCallTypeAndByDay(1, day));
-        System.out.println(">> nb appels de temps d'attente < 20s de type 2 : "+ cc.getNbGoodWaitingTimesByCallTypeAndByDay(2, day));
+        System.out.println("> Jour " + day + " :");
+        System.out.println(">> nb abandons de type 1 : " + cc.getNbAbandonsByCallTypeAndByDay(1, day));
+        System.out.println(">> nb abandons de type 2 : " + cc.getNbAbandonsByCallTypeAndByDay(2, day));
+        System.out.println(">> nb appels de temps d'attente < 20s de type 1 : "
+                + cc.getNbGoodWaitingTimesByCallTypeAndByDay(1, day));
+        System.out.println(">> nb appels de temps d'attente < 20s de type 2 : "
+                + cc.getNbGoodWaitingTimesByCallTypeAndByDay(2, day));
+        
+        //print histograms
+        cc.printHistogram(cc.getOccupationRatesByAgentAndType(1, 3));
+        System.out.println(Arrays.toString(cc.getOccupationRatesByAgentAndType(1, 3)));
 
         /*
-        System.out.println("cc.abandonsCollector1.getArray() : " + Arrays.toString(cc.abandonsCollector1.getArray()));
-        System.out.println("cc.abandonsCollector2.getArray() : " + Arrays.toString(cc.abandonsCollector2.getArray()));
-        System.out.println("cc.goodWaitingTimesCollector1.getArray() : " + Arrays.toString(cc.goodWaitingTimesCollector1.getArray()));
-        System.out.println("cc.goodWaitingTimesCollector2.getArray() : " + Arrays.toString(cc.goodWaitingTimesCollector2.getArray()));
+         * System.out.println("cc.abandonsCollector1.getArray() : " +
+         * Arrays.toString(cc.abandonsCollector1.getArray()));
+         * System.out.println("cc.abandonsCollector2.getArray() : " +
+         * Arrays.toString(cc.abandonsCollector2.getArray()));
+         * System.out.println("cc.goodWaitingTimesCollector1.getArray() : " +
+         * Arrays.toString(cc.goodWaitingTimesCollector1.getArray()));
+         * System.out.println("cc.goodWaitingTimesCollector2.getArray() : " +
+         * Arrays.toString(cc.goodWaitingTimesCollector2.getArray()));
          */
-    }
-
-    public double[] getNbAbandonsByCallType(int callType) {
-        return (callType == 1) ? abandonsCollector1.getArray() : abandonsCollector2.getArray();
-    }
-
-    public double getNbAbandonsByCallTypeAndByDay(int callType, int day) {
-        return getNbAbandonsByCallType(callType)[day - 1];
-    }
-    
-    public double[] getNbGoodWaitingTimesByCallType(int callType) {
-        return (callType == 1) ? goodWaitingTimesCollector1.getArray() : goodWaitingTimesCollector2.getArray();
-    }
-
-    public double getNbGoodWaitingTimesByCallTypeAndByDay(int callType, int day) {
-        return getNbGoodWaitingTimesByCallType(callType)[day - 1];
-    }
-
-    public void printOccupationRatesAverage(int agentType) {
-
-        LinkedList<Agent> listAgents = (agentType == 1) ? listAgents1 : listAgents2;
-
-        double sum = 0.0;
-        double moy;
-
-        System.out.println("Liste des taux d'occupation moyens des agents de type " + agentType);
-        for (int i = 0; i < listAgents.size(); i++) {
-
-            moy = listAgents.get(i).listOccupationRates
-                    .stream()
-                    .mapToDouble(a -> a)
-                    .average()
-                    .getAsDouble();
-            sum += moy;
-            System.out.println("- Agent " + (i + 1) + " : " + moy);
-        }
-        System.out.println("-- moyenne du groupe " + agentType + " : " + sum / listAgents.size());
     }
 
 }
