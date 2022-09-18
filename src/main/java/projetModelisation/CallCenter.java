@@ -62,6 +62,9 @@ public class CallCenter {
         this.goodWaitingTimesThreshold = s;
         this.nbDays = n;
         this.nbHoursPerDay = T;
+        
+        // start the simulation
+        simulate();
     }
 
     private class Agent {
