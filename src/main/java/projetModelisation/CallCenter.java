@@ -6,6 +6,7 @@ import umontreal.ssj.randvar.ExponentialGen;
 import umontreal.ssj.randvar.RandomVariateGen;
 import umontreal.ssj.rng.MRG32k3a;
 import umontreal.ssj.simevents.Event;
+import umontreal.ssj.simevents.Sim;
 import umontreal.ssj.stat.Tally;
 
 public class CallCenter {
@@ -37,6 +38,8 @@ public class CallCenter {
     int nbDays; // number of days
     int nbHoursPerDay; // number of hours per day (T)
 
+    int dayIndex = 0;
+
     public CallCenter(
             double lambda1, double lambda2,
             double mu11, double mu12, double mu21, double mu22,
@@ -65,7 +68,7 @@ public class CallCenter {
 
         int agenType;
         Double listOccupationRates[] = new Double[nbDays];
-        ArrayList<Call> CallResponded1, CallResponded2;
+        ArrayList<Call> callsResponded1, callsResponded2;
 
         public Agent() {
         }
@@ -108,24 +111,24 @@ public class CallCenter {
                         // an agent 1 took the call
                         Agent agent1 = (Agent) listFreeAgents1.removeFirst();
                         listBusyAgents1.add(agent1);
-                        agent1.CallResponded1.add(call);
+                        agent1.callsResponded1.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC1A1.nextDouble();
-                        
+
                         new EndOfCall(call).schedule(call.serviceTime);
-                        
+
                         nGoodWaitingTimes1++;
                     }
                     case 2 -> {
                         // an agent 2 took the call
                         Agent agent2 = (Agent) listFreeAgents2.removeFirst();
                         listBusyAgents2.add(agent2);
-                        agent2.CallResponded1.add(call);
+                        agent2.callsResponded1.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC1A2.nextDouble();
-                        
+
                         new EndOfCall(call).schedule(call.serviceTime);
-                        
+
                         nGoodWaitingTimes1++;
                     }
                     default -> // no agent can take the call
@@ -146,24 +149,24 @@ public class CallCenter {
                         // an agent 1 took the call
                         Agent agent1 = (Agent) listFreeAgents1.removeFirst();
                         listBusyAgents1.add(agent1);
-                        agent1.CallResponded2.add(call);
+                        agent1.callsResponded2.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC2A1.nextDouble();
-                        
+
                         new EndOfCall(call).schedule(call.serviceTime);
-                        
+
                         nGoodWaitingTimes2++;
                     }
                     case 2 -> {
                         // an agent 2 took the call
                         Agent agent2 = (Agent) listFreeAgents2.removeFirst();
                         listBusyAgents2.add(agent2);
-                        agent2.CallResponded2.add(call);
+                        agent2.callsResponded2.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC2A2.nextDouble();
-                        
+
                         new EndOfCall(call).schedule(call.serviceTime);
-                        
+
                         nGoodWaitingTimes2++;
                     }
                     default -> // no agent can take the call
@@ -212,11 +215,12 @@ public class CallCenter {
         }
     }
 
+    /*
     private int getAnotherCall(int agentType) {
         // to implement later...
         return 0;
     }
-
+     */
     class EndOfCall extends Event {
 
         Call call;
@@ -234,35 +238,113 @@ public class CallCenter {
             switch (agent.agenType) {
                 case 1 -> {
                     listBusyAgents1.remove(agent);
-                    
 
                     if (!listWaitingCalls1.isEmpty()) {
                         // cela veut dire que tous les agents 1 sont occupes
-                        // donc il prend la tete de file des appels de type 1
+                        Call ca = listWaitingCalls1.removeFirst();
+                        ca.agentWhoResponded = agent;
+                        agent.callsResponded1.add(ca);
                         // on genere le serviceTime
+                        ca.serviceTime = genServiceTimeC1A1.nextDouble();
                         // on programme la fin du call dans call.serviceTime
+                        new EndOfCall(ca).schedule(ca.serviceTime);
                         // on verifie si le temps d'attente est < s pour le garder (1)
+                        if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
+                            nGoodWaitingTimes1++;
+                        }
                     } else if (!listWaitingCalls2.isEmpty()) {
                         // cela veut dire que tous les agents 2 sont occupes
                         // donc il prend la tete de file
+                        Call ca = listWaitingCalls2.removeFirst();
+                        ca.agentWhoResponded = agent;
+                        agent.callsResponded2.add(ca);
                         // on genere le serviceTime
+                        ca.serviceTime = genServiceTimeC2A1.nextDouble();
                         // on programme la fin du call dans call.serviceTime
+                        new EndOfCall(ca).schedule(ca.serviceTime);
                         // on verifie si le temps d'attente est < s pour le garder (2)
+                        if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
+                            nGoodWaitingTimes2++;
+                        }
                     } else {
                         // cela veut dire qu'aucun appel n'est en attente
                         // on le remet a la queue des agents 1 libres.
-                        //listFreeAgents1.addLast(agent);
+                        listFreeAgents1.addLast(agent);
                     }
                     break;
                 }
                 case 2 -> {
                     listBusyAgents2.remove(agent);
-                    //listFreeAgents2.addLast(agent);
+
+                    if (!listWaitingCalls2.isEmpty()) {
+                        // cela veut dire que tous les agents 2 sont occupes
+                        // donc il prend la tete de file
+                        Call ca = listWaitingCalls2.removeFirst();
+                        ca.agentWhoResponded = agent;
+                        agent.callsResponded2.add(ca);
+                        // on genere le serviceTime
+                        ca.serviceTime = genServiceTimeC2A2.nextDouble();
+                        // on programme la fin du call dans call.serviceTime
+                        new EndOfCall(ca).schedule(ca.serviceTime);
+                        // on verifie si le temps d'attente est < s pour le garder (2)
+                        if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
+                            nGoodWaitingTimes2++;
+                        }
+                    } else if (!listWaitingCalls1.isEmpty()) {
+                        // cela veut dire que tous les agents 1 sont occupes
+                        Call ca = listWaitingCalls1.removeFirst();
+                        ca.agentWhoResponded = agent;
+                        agent.callsResponded1.add(ca);
+                        // on genere le serviceTime
+                        ca.serviceTime = genServiceTimeC1A2.nextDouble();
+                        // on programme la fin du call dans call.serviceTime
+                        new EndOfCall(ca).schedule(ca.serviceTime);
+                        // on verifie si le temps d'attente est < s pour le garder (1)
+                        if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
+                            nGoodWaitingTimes1++;
+                        }
+                    } else {
+                        // cela veut dire qu'aucun appel n'est en attente
+                        // on le remet a la queue des agents 1 libres.
+                        listFreeAgents2.addLast(agent);
+                    }
                     break;
                 }
 
             }
 
+        }
+
+    }
+
+    private void simulate() {
+        Sim.init();
+        new EndOfDay().schedule(this.nbHoursPerDay);
+        new Arrival(1).schedule(genArrivalTime1.nextDouble());
+        new Arrival(2).schedule(genArrivalTime2.nextDouble());
+        Sim.start();
+    }
+
+    private class EndOfDay extends Event {
+
+        @Override
+        public void actions() {
+            // update variables, collectors ...
+                                    // do not forget filling listFreeAgents with instances of Agent "new Agent()". maybe a loop;
+            
+            if (++dayIndex < nbDays) {
+                new EndOfDay().schedule(nbHoursPerDay);
+            } else {
+                new EndOfSimulation().schedule(0.0);
+            }
+        }
+    }
+
+    private class EndOfSimulation extends Event {
+
+        @Override
+        public void actions() {
+            Sim.stop();
         }
 
     }
