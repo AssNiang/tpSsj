@@ -393,7 +393,6 @@ public class CallCenter {
             listFreeAgents2.addAll(listAgents2);
 
             if (++dayIndex < nbDays) {
-                new EndOfDay().schedule(nbHoursPerDay);
                 new EndOfDay().schedule(nbHoursPerDay * HOUR);
             } else {
                 new EndOfSimulation().schedule(0.0);
