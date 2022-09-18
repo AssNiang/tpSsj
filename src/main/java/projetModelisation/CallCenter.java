@@ -353,7 +353,7 @@ public class CallCenter {
         for (int i = 0; i < nAgents2; i++) {
             listAgents2.add(i, new Agent(2));
         }
-        
+
         listFreeAgents1.addAll(listAgents1);
         listFreeAgents2.addAll(listAgents2);
 
@@ -364,7 +364,14 @@ public class CallCenter {
 
         @Override
         public void actions() {
-            // update variables, collectors ...
+
+            for (Agent ag1 : listAgents1) {
+                ag1.listOccupationRates.set(dayIndex, ag1.listOccupationRates.get(dayIndex) / (nbHoursPerDay * HOUR));
+            }
+            for (Agent ag2 : listAgents2) {
+                ag2.listOccupationRates.set(dayIndex, ag2.listOccupationRates.get(dayIndex) / (nbHoursPerDay * HOUR));
+            }
+
             arrivalsCollector1.add(nArrivals1);
             arrivalsCollector2.add(nArrivals2);
             nArrivals1 = nArrivals2 = 0;
@@ -379,9 +386,6 @@ public class CallCenter {
 
             listWaitingCalls1.clear();
             listWaitingCalls2.clear();
-
-//            new Arrival(1).schedule(genArrivalTime1.nextDouble() * MINUTE);
-//            new Arrival(2).schedule(genArrivalTime2.nextDouble() * MINUTE);
 
             listFreeAgents1.clear();
             listFreeAgents2.clear();
@@ -416,7 +420,7 @@ public class CallCenter {
         int n = 1000;
 
         CallCenter cc = new CallCenter(lambda1, lambda2, mu11, mu12, mu21, mu22, nu1, nu2, n1, n2, s, T, n);
-        
+
         System.out.println("cc.arrivalsCollector1.report() : ");
         System.out.println(cc.arrivalsCollector1.report());
         System.out.println("cc.arrivalsCollector2.report() : ");
@@ -431,6 +435,14 @@ public class CallCenter {
         System.out.println(cc.goodWaitingTimesCollector1.report());
         System.out.println("cc.goodWaitingTimesCollector2.report() : ");
         System.out.println(cc.goodWaitingTimesCollector2.report());
+
+        System.out.println("cc occupationRates : ");
+        System.out.println(cc.listAgents1.get(30).listOccupationRates
+                .stream()
+                .mapToDouble(a -> a)
+                .average()
+        );
+
         /*
         System.out.println("cc.abandonsCollector1.getArray() : " + Arrays.toString(cc.abandonsCollector1.getArray()));
         System.out.println("cc.abandonsCollector2.getArray() : " + Arrays.toString(cc.abandonsCollector2.getArray()));
