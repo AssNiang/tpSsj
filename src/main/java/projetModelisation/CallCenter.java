@@ -51,6 +51,9 @@ public class CallCenter {
     final double MINUTE = 60.0;
     final double HOUR = 3600.0;
 
+    int nbFreeAgents2ToAnswerCall1Threshold;
+    int nbFreeAgents1ToAnswerCall2Threshold;
+
     public CallCenter(
             double lambda1, double lambda2,
             double mu11, double mu12, double mu21, double mu22,
@@ -58,7 +61,9 @@ public class CallCenter {
             int n1, int n2,
             int s,
             int T,
-            int n
+            int n,
+            int s1,
+            int s2
     ) {
         this.genArrivalTime1 = new ExponentialGen(new MRG32k3a(), lambda1);
         this.genArrivalTime2 = new ExponentialGen(new MRG32k3a(), lambda2);
@@ -73,6 +78,9 @@ public class CallCenter {
         this.goodWaitingTimesThreshold = s;
         this.nbHoursPerDay = T;
         this.nbDays = n;
+
+        this.nbFreeAgents1ToAnswerCall2Threshold = s1;
+        this.nbFreeAgents2ToAnswerCall1Threshold = s2;
 
         // start the simulation
         simulate();
@@ -204,13 +212,13 @@ public class CallCenter {
         if (callType == 1) {
             if (!listFreeAgents1.isEmpty()) {
                 return 1;
-            } else if (!listFreeAgents2.isEmpty()) {
+            } else if (listFreeAgents2.size() > this.nbFreeAgents2ToAnswerCall1Threshold) {
                 return 2;
             }
         } else if (callType == 2) {
             if (!listFreeAgents2.isEmpty()) {
                 return 2;
-            } else if (!listFreeAgents1.isEmpty()) {
+            } else if (listFreeAgents1.size() > this.nbFreeAgents1ToAnswerCall2Threshold) {
                 return 1;
             }
         }
@@ -276,19 +284,22 @@ public class CallCenter {
                             nGoodWaitingTimes1++;
                         }
                     } else if (!listWaitingCalls2.isEmpty()) {
-                        // cela veut dire que tous les agents 2 sont occupes
-                        // donc il prend la tete de file
-                        Call ca = listWaitingCalls2.removeFirst();
-                        ca.agentWhoResponded = agent;
-                        agent.callsResponded2.add(ca);
-                        // on genere le serviceTime
-                        ca.serviceTime = genServiceTimeC2A1.nextDouble() * MINUTE;
-                        // on programme la fin du call dans call.serviceTime
-                        new EndOfCall(ca).schedule(ca.serviceTime);
-                        // on verifie si le temps d'attente est < s pour le garder (2)
-                        if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
-                            nGoodWaitingTimes2++;
+                        if (listFreeAgents1.size() >= nbFreeAgents1ToAnswerCall2Threshold) {
+                            // cela veut dire que tous les agents 2 sont occupes
+                            // donc il prend la tete de file
+                            Call ca = listWaitingCalls2.removeFirst();
+                            ca.agentWhoResponded = agent;
+                            agent.callsResponded2.add(ca);
+                            // on genere le serviceTime
+                            ca.serviceTime = genServiceTimeC2A1.nextDouble() * MINUTE;
+                            // on programme la fin du call dans call.serviceTime
+                            new EndOfCall(ca).schedule(ca.serviceTime);
+                            // on verifie si le temps d'attente est < s pour le garder (2)
+                            if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
+                                nGoodWaitingTimes2++;
+                            }
                         }
+
                     } else {
                         // cela veut dire qu'aucun appel n'est en attente
                         // on le remet a la queue des agents 1 libres.
@@ -315,17 +326,20 @@ public class CallCenter {
                         }
                     } else if (!listWaitingCalls1.isEmpty()) {
                         // cela veut dire que tous les agents 1 sont occupes
-                        Call ca = listWaitingCalls1.removeFirst();
-                        ca.agentWhoResponded = agent;
-                        agent.callsResponded1.add(ca);
-                        // on genere le serviceTime
-                        ca.serviceTime = genServiceTimeC1A2.nextDouble() * MINUTE;
-                        // on programme la fin du call dans call.serviceTime
-                        new EndOfCall(ca).schedule(ca.serviceTime);
-                        // on verifie si le temps d'attente est < s pour le garder (1)
-                        if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
-                            nGoodWaitingTimes1++;
+                        if (listFreeAgents2.size() >= nbFreeAgents2ToAnswerCall1Threshold) {
+                            Call ca = listWaitingCalls1.removeFirst();
+                            ca.agentWhoResponded = agent;
+                            agent.callsResponded1.add(ca);
+                            // on genere le serviceTime
+                            ca.serviceTime = genServiceTimeC1A2.nextDouble() * MINUTE;
+                            // on programme la fin du call dans call.serviceTime
+                            new EndOfCall(ca).schedule(ca.serviceTime);
+                            // on verifie si le temps d'attente est < s pour le garder (1)
+                            if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
+                                nGoodWaitingTimes1++;
+                            }
                         }
+
                     } else {
                         // cela veut dire qu'aucun appel n'est en attente
                         // on le remet a la queue des agents 1 libres.
@@ -419,29 +433,35 @@ public class CallCenter {
         int T = 8;
         int n = 1000;
 
-        CallCenter cc = new CallCenter(lambda1, lambda2, mu11, mu12, mu21, mu22, nu1, nu2, n1, n2, s, T, n);
+        int s1 = 1;
+        int s2 = 1;
 
-        System.out.println("cc.arrivalsCollector1.report() : ");
+        CallCenter cc = new CallCenter(lambda1, lambda2, mu11, mu12, mu21, mu22, nu1, nu2, n1, n2, s, T, n, s1, s2);
+
+        System.out.println(">> Rapport du nombre d'arrivées de type 1 par jour : ");
         System.out.println(cc.arrivalsCollector1.report());
-        System.out.println("cc.arrivalsCollector2.report() : ");
+        System.out.println(">> Rapport du nombre d'arrivées de type 2 par jour : ");
         System.out.println(cc.arrivalsCollector2.report());
 
-        System.out.println("cc.abandonsCollector1.report() : ");
+        System.out.println(">> Rapport du nombre d'abandons de type 1 par jour : ");
         System.out.println(cc.abandonsCollector1.report());
-        System.out.println("cc.abandonsCollector2.report() : ");
+        System.out.println(">> Rapport du nombre d'abandons de type 2 par jour : ");
         System.out.println(cc.abandonsCollector2.report());
 
-        System.out.println("cc.goodWaitingTimesCollector1.report() : ");
+        System.out.println(">> Rapport du nombre d'appels de type 1 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector1.report());
-        System.out.println("cc.goodWaitingTimesCollector2.report() : ");
+        System.out.println(">> Rapport du nombre d'appels de type 2 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector2.report());
 
-        System.out.println("cc occupationRates : ");
-        System.out.println(cc.listAgents1.get(30).listOccupationRates
-                .stream()
-                .mapToDouble(a -> a)
-                .average()
-        );
+        cc.printOccupationRatesAverage(1);
+        cc.printOccupationRatesAverage(2);
+        
+        int day = 200;
+        System.out.println("> Jour "+day+" :");
+        System.out.println(">> nb abandons de type 1 : "+ cc.getNbAbandonsByCallTypeAndByDay(1, day));
+        System.out.println(">> nb abandons de type 2 : "+ cc.getNbAbandonsByCallTypeAndByDay(2, day));
+        System.out.println(">> nb appels de temps d'attente < 20s de type 1 : "+ cc.getNbGoodWaitingTimesByCallTypeAndByDay(1, day));
+        System.out.println(">> nb appels de temps d'attente < 20s de type 2 : "+ cc.getNbGoodWaitingTimesByCallTypeAndByDay(2, day));
 
         /*
         System.out.println("cc.abandonsCollector1.getArray() : " + Arrays.toString(cc.abandonsCollector1.getArray()));
@@ -450,6 +470,42 @@ public class CallCenter {
         System.out.println("cc.goodWaitingTimesCollector2.getArray() : " + Arrays.toString(cc.goodWaitingTimesCollector2.getArray()));
          */
     }
-}
 
-// do not forget filling listFreeAgents with instances of Agent "new Agent()". maybe a loop;
+    public double[] getNbAbandonsByCallType(int callType) {
+        return (callType == 1) ? abandonsCollector1.getArray() : abandonsCollector2.getArray();
+    }
+
+    public double getNbAbandonsByCallTypeAndByDay(int callType, int day) {
+        return getNbAbandonsByCallType(callType)[day - 1];
+    }
+    
+    public double[] getNbGoodWaitingTimesByCallType(int callType) {
+        return (callType == 1) ? goodWaitingTimesCollector1.getArray() : goodWaitingTimesCollector2.getArray();
+    }
+
+    public double getNbGoodWaitingTimesByCallTypeAndByDay(int callType, int day) {
+        return getNbGoodWaitingTimesByCallType(callType)[day - 1];
+    }
+
+    public void printOccupationRatesAverage(int agentType) {
+
+        LinkedList<Agent> listAgents = (agentType == 1) ? listAgents1 : listAgents2;
+
+        double sum = 0.0;
+        double moy;
+
+        System.out.println("Liste des taux d'occupation moyens des agents de type " + agentType);
+        for (int i = 0; i < listAgents.size(); i++) {
+
+            moy = listAgents.get(i).listOccupationRates
+                    .stream()
+                    .mapToDouble(a -> a)
+                    .average()
+                    .getAsDouble();
+            sum += moy;
+            System.out.println("- Agent " + (i + 1) + " : " + moy);
+        }
+        System.out.println("-- moyenne du groupe " + agentType + " : " + sum / listAgents.size());
+    }
+
+}
