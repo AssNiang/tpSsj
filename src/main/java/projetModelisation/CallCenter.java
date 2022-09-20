@@ -3,6 +3,7 @@ package projetModelisation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
+import umontreal.ssj.charts.HistogramChart;
 import umontreal.ssj.randvar.ExponentialGen;
 import umontreal.ssj.randvar.RandomVariateGen;
 import umontreal.ssj.rng.MRG32k3a;
@@ -539,16 +540,11 @@ public class CallCenter {
         cc.printHistogram(cc.getOccupationRatesByAgentAndType(1, 3));
         System.out.println(Arrays.toString(cc.getOccupationRatesByAgentAndType(1, 3)));
 
-        /*
-         * System.out.println("cc.abandonsCollector1.getArray() : " +
-         * Arrays.toString(cc.abandonsCollector1.getArray()));
-         * System.out.println("cc.abandonsCollector2.getArray() : " +
-         * Arrays.toString(cc.abandonsCollector2.getArray()));
-         * System.out.println("cc.goodWaitingTimesCollector1.getArray() : " +
-         * Arrays.toString(cc.goodWaitingTimesCollector1.getArray()));
-         * System.out.println("cc.goodWaitingTimesCollector2.getArray() : " +
-         * Arrays.toString(cc.goodWaitingTimesCollector2.getArray()));
-         */
+//        String title = "Histogramme des taux d'occupation moyens par jout";
+//        String x_label = "Abscisses";
+//        String y_label = "Ordonnées";
+//        HistogramChart occupationChart = new HistogramChart(title, x_label, y_label, cc.getOccupationRatesByAgentAndType(1, 0));
+//        
     }
 
 }
