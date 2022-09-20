@@ -3,7 +3,7 @@ package projetModelisation;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
-import umontreal.ssj.charts.HistogramChart;
+import umontreal.ssj.charts.*;
 import umontreal.ssj.randvar.ExponentialGen;
 import umontreal.ssj.randvar.RandomVariateGen;
 import umontreal.ssj.rng.MRG32k3a;
@@ -81,8 +81,7 @@ public class CallCenter {
 
         this.nbFreeAgents1ToAnswerCall2Threshold = s1;
         this.nbFreeAgents2ToAnswerCall1Threshold = s2;
-        
-        
+
         for (int i = 0; i < nAgents1; i++) {
             listAgents1.add(i, new Agent(1));
         }
@@ -97,14 +96,14 @@ public class CallCenter {
     private class Agent {
 
         int agentType;
-        ArrayList<Double> listOccupationRates = new ArrayList<>();
+        ArrayList<Double> listBusyness = new ArrayList<>();
         ArrayList<Call> callsResponded1 = new ArrayList<>();
         ArrayList<Call> callsResponded2 = new ArrayList<>();
 
         public Agent(int agentType) {
             this.agentType = agentType;
             for (int i = 0; i < nbDays; i++) {
-                listOccupationRates.add(i, 0.0);
+                listBusyness.add(i, 0.0);
             }
         }
     }
@@ -132,7 +131,7 @@ public class CallCenter {
         @Override
         public void actions() {
             if (this.type == 1) {
-                
+
                 new Arrival(type).schedule(genArrivalTime1.nextDouble() * MINUTE);
 
                 nArrivals1++;
@@ -272,7 +271,7 @@ public class CallCenter {
         @Override
         public void actions() {
             Agent agent = this.call.agentWhoResponded;
-            agent.listOccupationRates.set(dayIndex, agent.listOccupationRates.get(dayIndex) + this.call.serviceTime);             
+            agent.listBusyness.set(dayIndex, agent.listBusyness.get(dayIndex) + this.call.serviceTime);
 
             switch (agent.agentType) {
                 case 1 -> {
@@ -369,8 +368,6 @@ public class CallCenter {
         new Arrival(1).schedule(genArrivalTime1.nextDouble() * MINUTE);
         new Arrival(2).schedule(genArrivalTime2.nextDouble() * MINUTE);
 
-        
-
         listFreeAgents1.addAll(listAgents1);
         listFreeAgents2.addAll(listAgents2);
 
@@ -383,10 +380,10 @@ public class CallCenter {
         public void actions() {
 
             for (Agent ag1 : listAgents1) {
-                ag1.listOccupationRates.set(dayIndex, ag1.listOccupationRates.get(dayIndex) / (nbHoursPerDay * HOUR));
+                ag1.listBusyness.set(dayIndex, ag1.listBusyness.get(dayIndex) / (nbHoursPerDay * HOUR));
             }
             for (Agent ag2 : listAgents2) {
-                ag2.listOccupationRates.set(dayIndex, ag2.listOccupationRates.get(dayIndex) / (nbHoursPerDay * HOUR));
+                ag2.listBusyness.set(dayIndex, ag2.listBusyness.get(dayIndex) / (nbHoursPerDay * HOUR));
             }
 
             arrivalsCollector1.add(nArrivals1);
@@ -427,9 +424,6 @@ public class CallCenter {
     }
 
     // ------------- other methods ---------------------
-    
-    
-
     public double[] getNbAbandonsByCallType(int callType) {
         return (callType == 1) ? abandonsCollector1.getArray() : abandonsCollector2.getArray();
     }
@@ -445,52 +439,57 @@ public class CallCenter {
     public double getNbGoodWaitingTimesByCallTypeAndByDay(int callType, int day) {
         return getNbGoodWaitingTimesByCallType(callType)[day - 1];
     }
-    
-    public double[] getOccupationRatesByAgentAndType(int agentType, int numAgent){
-        LinkedList<Agent> agents = (agentType==1)?listAgents1:listAgents2;
-        return agents.get(numAgent-1).listOccupationRates.stream().mapToDouble(Double::doubleValue).toArray();
+
+    public double[] getBusynessByAgentAndType(int agentType, int numAgent) {
+        LinkedList<Agent> agents = (agentType == 1) ? listAgents1 : listAgents2;
+        return agents.get(numAgent - 1).listBusyness.stream().mapToDouble(Double::doubleValue).toArray();
     }
 
-    public void printOccupationRatesAverage(int agentType) {
+    public double[] getBusynessAverageByAgentType(int agentType) {
 
         LinkedList<Agent> listAgents = (agentType == 1) ? listAgents1 : listAgents2;
 
-        double sum = 0.0;
+        double[] businessAverageList = new double[nbDays];
+
         double moy;
 
-        System.out.println("Liste des taux d'occupation moyens des agents de type " + agentType);
-        for (int i = 0; i < listAgents.size(); i++) {
+        for (int d = 0; d < nbDays; d++) {
+            double sum = 0.0;
 
-            moy = listAgents.get(i).listOccupationRates
-                    .stream()
-                    .mapToDouble(a -> a)
-                    .average()
-                    .getAsDouble();
-            sum += moy;
-            System.out.println("- Agent " + (i + 1) + " : " + moy +" - C1: "+listAgents.get(i).callsResponded1.size()+ " - C2: "+listAgents.get(i).callsResponded2.size());
+            for (int a = 0; a < listAgents.size(); a++) {
+                businessAverageList[d] += listAgents.get(a).listBusyness.get(d);
+            }
+
+            businessAverageList[d] /= listAgents.size();
+
+//            moy = listAgents.get(i).listBusyness
+//                    .stream()
+//                    .mapToDouble(a -> a)
+//                    .average()
+//                    .getAsDouble();
+//            sum += moy;
+            //System.out.println("- Agent " + (i + 1) + " : " + moy +" - C1: "+listAgents.get(i).callsResponded1.size()+ " - C2: "+listAgents.get(i).callsResponded2.size());
         }
-        System.out.println("-- moyenne du groupe " + agentType + " : " + sum / listAgents.size());
+        //System.out.println("-- moyenne du groupe " + agentType + " : " + sum / listAgents.size());
+        return businessAverageList;
     }
-    
+
     // print histograms
-    
-    private void printHistogram(double[] array) {
-        
-        for (int i = 0; i < array.length; i++) {
-            String label = i + " : ";
-            System.out.println(label + convertToStars(array[i]));
-        }
+    private void printHistogram(int agentType) {
+        double[] data = getBusynessAverageByAgentType(agentType);
+        String title = "Histogramme des taux d'occupation moyens par jour des agents de type "+agentType;
+        String x_label = "Abscisses";
+        String y_label = "Ordonnées";
+        System.out.println(Arrays.toString(data));
+        HistogramChart chart;
+        chart = new HistogramChart(title, x_label, y_label, data);
+        HistogramSeriesCollection collec = chart.getSeriesCollection();
+        collec.setBins(0, 80);
+        double[] bounds = {0, 1.15, 0, 120};
+        chart.setManualRange(bounds);
+        chart.view(1000, 1000);
     }
 
-    private String convertToStars(double num) {
-        StringBuilder builder = new StringBuilder();
-        for (int j = 0; j < num; j++) {
-            builder.append('*');
-        }
-        return builder.toString();
-    }
-    
-    
     // --------------- main ----------------------
     public static void main(String args[]) {
         // TODO code application logic here
@@ -502,11 +501,11 @@ public class CallCenter {
         int T = 8;
         int n = 1000;
 
-        int s1 = 1;
-        int s2 = 1;
+        int s1, s2;
+        s1=s2=0;
 
         CallCenter cc = new CallCenter(lambda1, lambda2, mu11, mu12, mu21, mu22, nu1, nu2, n1, n2, s, T, n, s1, s2);
-
+        /*
         System.out.println(">> Rapport du nombre d'arrivées de type 1 par jour : ");
         System.out.println(cc.arrivalsCollector1.report());
         System.out.println(">> Rapport du nombre d'arrivées de type 2 par jour : ");
@@ -523,10 +522,10 @@ public class CallCenter {
         System.out
                 .println(">> Rapport du nombre d'appels de type 2 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector2.report());
-
-        cc.printOccupationRatesAverage(1);
-        cc.printOccupationRatesAverage(2);
-
+         */
+        System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(1)));
+        System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(2)));
+        /*
         int day = 200;
         System.out.println("> Jour " + day + " :");
         System.out.println(">> nb abandons de type 1 : " + cc.getNbAbandonsByCallTypeAndByDay(1, day));
@@ -535,16 +534,11 @@ public class CallCenter {
                 + cc.getNbGoodWaitingTimesByCallTypeAndByDay(1, day));
         System.out.println(">> nb appels de temps d'attente < 20s de type 2 : "
                 + cc.getNbGoodWaitingTimesByCallTypeAndByDay(2, day));
-        
+         */
         //print histograms
-        cc.printHistogram(cc.getOccupationRatesByAgentAndType(1, 3));
-        System.out.println(Arrays.toString(cc.getOccupationRatesByAgentAndType(1, 3)));
+        cc.printHistogram(1);
+        cc.printHistogram(2);
 
-//        String title = "Histogramme des taux d'occupation moyens par jout";
-//        String x_label = "Abscisses";
-//        String y_label = "Ordonnées";
-//        HistogramChart occupationChart = new HistogramChart(title, x_label, y_label, cc.getOccupationRatesByAgentAndType(1, 0));
-//        
     }
 
 }
