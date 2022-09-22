@@ -413,8 +413,8 @@ public class CallCenter {
     private void printHistogram(int agentType) {
         double[] data = getBusynessAverageByAgentType(agentType);
         String title = "Histogramme des taux d'occupation moyens par jour des agents de type " + agentType;
-        String x_label = "Abscisses";
-        String y_label = "Ordonnées";
+        String x_label = "taux d'occupation moyens par jour";
+        String y_label = "nombre de jours";
         //System.out.println(Arrays.toString(data));
         HistogramChart chart;
         chart = new HistogramChart(title, x_label, y_label, data);
