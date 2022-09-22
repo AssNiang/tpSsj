@@ -78,16 +78,6 @@ public class CallCenter {
         this.nbFreeAgents1ToAnswerCall2Threshold = s1;
         this.nbFreeAgents2ToAnswerCall1Threshold = s2;
 
-        for (int i = 0; i < nAgents1; i++) {
-            listAgents1.add(i, new Agent(1));
-        }
-        for (int i = 0; i < nAgents2; i++) {
-            listAgents2.add(i, new Agent(2));
-        }
-
-        listFreeAgents1.addAll(listAgents1);
-        listFreeAgents2.addAll(listAgents2);
-
         // start the simulation
         simulate();
     }
@@ -316,6 +306,16 @@ public class CallCenter {
         new EndOfDay().schedule(nbHoursPerDay * HOUR);
         new Arrival(1).schedule(genArrivalTime1.nextDouble());
         new Arrival(2).schedule(genArrivalTime2.nextDouble());
+        
+        for (int i = 0; i < nAgents1; i++) {
+            listAgents1.add(i, new Agent(1));
+        }
+        for (int i = 0; i < nAgents2; i++) {
+            listAgents2.add(i, new Agent(2));
+        }
+
+        listFreeAgents1.addAll(listAgents1);
+        listFreeAgents2.addAll(listAgents2);
 
         Sim.start();
     }
