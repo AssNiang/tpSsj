@@ -14,7 +14,6 @@ import umontreal.ssj.stat.TallyStore;
 public class CallCenter {
 
     RandomVariateGen genArrivalTime1, genArrivalTime2;
-    
 
     RandomVariateGen genServiceTimeC1A1, genServiceTimeC1A2,
             genServiceTimeC2A1, genServiceTimeC2A2;
@@ -29,7 +28,7 @@ public class CallCenter {
     LinkedList<Agent> listAgents2 = new LinkedList<>();
     LinkedList<Agent> listFreeAgents1 = new LinkedList<>();
     LinkedList<Agent> listFreeAgents2 = new LinkedList<>();
-    
+
     int nArrivals1, nArrivals2;
     TallyStore arrivalsCollector1 = new TallyStore();
     TallyStore arrivalsCollector2 = new TallyStore();
@@ -47,7 +46,6 @@ public class CallCenter {
 
     int dayIndex = 0;
 
-    final double MINUTE = 60.0;
     final double HOUR = 3600.0;
 
     int nbFreeAgents2ToAnswerCall1Threshold;
@@ -87,6 +85,9 @@ public class CallCenter {
             listAgents2.add(i, new Agent(2));
         }
 
+        listFreeAgents1.addAll(listAgents1);
+        listFreeAgents2.addAll(listAgents2);
+
         // start the simulation
         simulate();
     }
@@ -111,7 +112,8 @@ public class CallCenter {
         double patienceTime;
         Agent agentWhoResponded;
 
-        public Call() {
+        public Call(int callType) {
+            this.callType = callType;
         }
     }
 
@@ -127,102 +129,78 @@ public class CallCenter {
         public void actions() {
             if (this.type == 1) {
 
-                new Arrival(type).schedule(genArrivalTime1.nextDouble() * MINUTE);
+                new Arrival(this.type).schedule(genArrivalTime1.nextDouble());
 
                 nArrivals1++;
 
-                Call call = new Call();
-                call.callType = this.type;
+                Call call = new Call(this.type);
                 call.arrivalTime = sim.time();
                 call.patienceTime = genPatienceTime1.nextDouble();
 
                 new Abandon(call).schedule(call.patienceTime);
 
-                switch (getAgent(call.callType)) {
-                    case 1 -> {
-                        // an agent 1 took the call
-                        Agent agent1 = (Agent) listFreeAgents1.removeFirst();
-                        agent1.callsResponded1.add(call);
-                        call.agentWhoResponded = agent1;
-                        call.serviceTime = genServiceTimeC1A1.nextDouble() * MINUTE;
+                if (!listFreeAgents1.isEmpty()) {
+                    // an agent 1 took the call
+                    Agent agent1 = (Agent) listFreeAgents1.removeFirst();
+                    agent1.callsResponded1.add(call);
+                    call.agentWhoResponded = agent1;
+                    call.serviceTime = genServiceTimeC1A1.nextDouble();
 
-                        new EndOfCall(call).schedule(call.serviceTime);
+                    new EndOfCall(call).schedule(call.serviceTime);
 
-                        nGoodWaitingTimes1++;
-                    }
-                    case 2 -> {
-                        // an agent 2 took the call
-                        Agent agent2 = (Agent) listFreeAgents2.removeFirst();
-                        agent2.callsResponded1.add(call);
-                        call.agentWhoResponded = agent2;
-                        call.serviceTime = genServiceTimeC1A2.nextDouble() * MINUTE;
+                    nGoodWaitingTimes1++;
+                } else if (listFreeAgents2.size() > nbFreeAgents2ToAnswerCall1Threshold) {
+                    // an agent 2 took the call
+                    Agent agent2 = (Agent) listFreeAgents2.removeFirst();
+                    agent2.callsResponded1.add(call);
+                    call.agentWhoResponded = agent2;
+                    call.serviceTime = genServiceTimeC1A2.nextDouble();
 
-                        new EndOfCall(call).schedule(call.serviceTime);
+                    new EndOfCall(call).schedule(call.serviceTime);
 
-                        nGoodWaitingTimes1++;
-                    }
-                    default -> // no agent can take the call
-                        listWaitingCalls1.addLast(call);
+                    nGoodWaitingTimes1++;
+                } else {
+                    listWaitingCalls1.addLast(call);
                 }
+
             } else if (this.type == 2) {
-                new Arrival(type).schedule(genArrivalTime2.nextDouble() * MINUTE);
+                new Arrival(this.type).schedule(genArrivalTime2.nextDouble());
 
                 nArrivals2++;
 
-                Call call = new Call();
-                call.callType = this.type;
+                Call call = new Call(this.type);
                 call.arrivalTime = sim.time();
                 call.patienceTime = genPatienceTime2.nextDouble();
 
                 new Abandon(call).schedule(call.patienceTime);
 
-                switch (getAgent(call.callType)) {
-                    case 1 -> {
-                        // an agent 1 took the call
-                        Agent agent1 = (Agent) listFreeAgents1.removeFirst();
-                        // listBusyAgents1.add(agent1);
-                        agent1.callsResponded2.add(call);
-                        call.agentWhoResponded = agent1;
-                        call.serviceTime = genServiceTimeC2A1.nextDouble() * MINUTE;
+                if (!listFreeAgents2.isEmpty()) {
+                    // an agent 2 took the call
+                    Agent agent2 = (Agent) listFreeAgents2.removeFirst();
+                    agent2.callsResponded2.add(call);
+                    call.agentWhoResponded = agent2;
+                    call.serviceTime = genServiceTimeC2A2.nextDouble();
 
-                        new EndOfCall(call).schedule(call.serviceTime);
+                    new EndOfCall(call).schedule(call.serviceTime);
 
-                        nGoodWaitingTimes2++;
-                    }
-                    case 2 -> {
-                        // an agent 2 took the call
-                        Agent agent2 = (Agent) listFreeAgents2.removeFirst();
-                        agent2.callsResponded2.add(call);
-                        call.agentWhoResponded = agent2;
-                        call.serviceTime = genServiceTimeC2A2.nextDouble() * MINUTE;
+                    nGoodWaitingTimes2++;
 
-                        new EndOfCall(call).schedule(call.serviceTime);
+                } else if (listFreeAgents1.size() > nbFreeAgents1ToAnswerCall2Threshold) {
+                    // an agent 1 took the call
+                    Agent agent1 = (Agent) listFreeAgents1.removeFirst();
+                    agent1.callsResponded2.add(call);
+                    call.agentWhoResponded = agent1;
+                    call.serviceTime = genServiceTimeC2A1.nextDouble();
 
-                        nGoodWaitingTimes2++;
-                    }
-                    default -> // no agent can take the call
-                        listWaitingCalls2.addLast(call);
+                    new EndOfCall(call).schedule(call.serviceTime);
+
+                    nGoodWaitingTimes2++;
+                } else {
+                    listWaitingCalls2.addLast(call);
                 }
             }
         }
 
-    }
-
-    private int getAgent(int callType) {
-        if (callType == 1) {
-            if (!listFreeAgents1.isEmpty()) {
-                return 1;
-            } else if (listFreeAgents2.size() > this.nbFreeAgents2ToAnswerCall1Threshold) {
-                return 2;
-            }
-        } else if (callType == 2) {
-            if (!listFreeAgents2.isEmpty()) {
-                return 2;
-            } else if (listFreeAgents1.size() > this.nbFreeAgents1ToAnswerCall2Threshold) {
-                return 1;
-            }
-        }
-        return 0;
     }
 
     class Abandon extends Event {
@@ -261,81 +239,66 @@ public class CallCenter {
 
             switch (agent.agentType) {
                 case 1 -> {
-                    // listBusyAgents1.remove(agent);
 
                     if (!listWaitingCalls1.isEmpty()) {
-                        // cela veut dire que tous les agents 1 sont occupes
                         Call ca = listWaitingCalls1.removeFirst();
                         ca.agentWhoResponded = agent;
                         agent.callsResponded1.add(ca);
-                        // on genere le serviceTime
-                        ca.serviceTime = genServiceTimeC1A1.nextDouble() * MINUTE;
-                        // on programme la fin du call dans call.serviceTime
+                        ca.serviceTime = genServiceTimeC1A1.nextDouble();
                         new EndOfCall(ca).schedule(ca.serviceTime);
-                        // on verifie si le temps d'attente est < s pour le garder (1)
                         if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
                             nGoodWaitingTimes1++;
+                            //System.out.println(sim.time() - ca.arrivalTime+ " - " + ca.serviceTime);
                         }
                     } else if (!listWaitingCalls2.isEmpty()) {
                         if (listFreeAgents1.size() >= nbFreeAgents1ToAnswerCall2Threshold) {
-                            // cela veut dire que tous les agents 2 sont occupes
-                            // donc il prend la tete de file
                             Call ca = listWaitingCalls2.removeFirst();
                             ca.agentWhoResponded = agent;
                             agent.callsResponded2.add(ca);
-                            // on genere le serviceTime
-                            ca.serviceTime = genServiceTimeC2A1.nextDouble() * MINUTE;
-                            // on programme la fin du call dans call.serviceTime
+                            ca.serviceTime = genServiceTimeC2A1.nextDouble();
                             new EndOfCall(ca).schedule(ca.serviceTime);
-                            // on verifie si le temps d'attente est < s pour le garder (2)
                             if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
                                 nGoodWaitingTimes2++;
                             }
+                        } else {
+                            listFreeAgents1.addLast(agent);
                         }
 
                     } else {
-                        // cela veut dire qu'aucun appel n'est en attente
-                        // on le remet a la queue des agents 1 libres.
                         listFreeAgents1.addLast(agent);
                     }
                     break;
                 }
                 case 2 -> {
-                    // listBusyAgents2.remove(agent);
 
                     if (!listWaitingCalls2.isEmpty()) {
-                        // cela veut dire que tous les agents 2 sont occupes
-                        // donc il prend la tete de file
                         Call ca = listWaitingCalls2.removeFirst();
                         ca.agentWhoResponded = agent;
                         agent.callsResponded2.add(ca);
-                        // on genere le serviceTime
-                        ca.serviceTime = genServiceTimeC2A2.nextDouble() * MINUTE;
-                        // on programme la fin du call dans call.serviceTime
+                        ca.serviceTime = genServiceTimeC2A2.nextDouble();
                         new EndOfCall(ca).schedule(ca.serviceTime);
-                        // on verifie si le temps d'attente est < s pour le garder (2)
+
                         if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
                             nGoodWaitingTimes2++;
+
                         }
                     } else if (!listWaitingCalls1.isEmpty()) {
-                        // cela veut dire que tous les agents 1 sont occupes
+
                         if (listFreeAgents2.size() >= nbFreeAgents2ToAnswerCall1Threshold) {
                             Call ca = listWaitingCalls1.removeFirst();
                             ca.agentWhoResponded = agent;
                             agent.callsResponded1.add(ca);
-                            // on genere le serviceTime
-                            ca.serviceTime = genServiceTimeC1A2.nextDouble() * MINUTE;
-                            // on programme la fin du call dans call.serviceTime
+                            ca.serviceTime = genServiceTimeC1A2.nextDouble();
                             new EndOfCall(ca).schedule(ca.serviceTime);
-                            // on verifie si le temps d'attente est < s pour le garder (1)
+
                             if (sim.time() - ca.arrivalTime <= goodWaitingTimesThreshold) {
                                 nGoodWaitingTimes1++;
                             }
+                        } else {
+                            listFreeAgents2.addLast(agent);
                         }
 
                     } else {
-                        // cela veut dire qu'aucun appel n'est en attente
-                        // on le remet a la queue des agents 1 libres.
                         listFreeAgents2.addLast(agent);
                     }
                     break;
@@ -351,11 +314,8 @@ public class CallCenter {
         Sim.init();
 
         new EndOfDay().schedule(nbHoursPerDay * HOUR);
-        new Arrival(1).schedule(genArrivalTime1.nextDouble() * MINUTE);
-        new Arrival(2).schedule(genArrivalTime2.nextDouble() * MINUTE);
-
-        listFreeAgents1.addAll(listAgents1);
-        listFreeAgents2.addAll(listAgents2);
+        new Arrival(1).schedule(genArrivalTime1.nextDouble());
+        new Arrival(2).schedule(genArrivalTime2.nextDouble());
 
         Sim.start();
     }
@@ -374,24 +334,26 @@ public class CallCenter {
 
             arrivalsCollector1.add(nArrivals1);
             arrivalsCollector2.add(nArrivals2);
-            nArrivals1 = nArrivals2 = 0;
 
-            abandonsCollector1.add(nAbandons1);
-            abandonsCollector2.add(nAbandons2);
-            nAbandons1 = nAbandons2 = 0;
-
-            goodWaitingTimesCollector1.add(nGoodWaitingTimes1);
-            goodWaitingTimesCollector2.add(nGoodWaitingTimes2);
+            abandonsCollector1.add(nAbandons1 * 100.0 / nArrivals1);
+            abandonsCollector2.add(nAbandons2 * 100.0 / nArrivals2);
+            
+            goodWaitingTimesCollector1.add(nGoodWaitingTimes1 * 100.0 / nArrivals1);
+            goodWaitingTimesCollector2.add(nGoodWaitingTimes2 * 100.0 / nArrivals2);
+            
             nGoodWaitingTimes1 = nGoodWaitingTimes2 = 0;
+            nAbandons1 = nAbandons2 = 0;
+            nArrivals1 = nArrivals2 = 0;
 
             listWaitingCalls1.clear();
             listWaitingCalls2.clear();
 
-            listFreeAgents1.clear();
-            listFreeAgents2.clear();
-            listFreeAgents1.addAll(listAgents1);
-            listFreeAgents2.addAll(listAgents2);
 
+//            listFreeAgents1.clear();
+//            listFreeAgents2.clear();
+//            listFreeAgents1.
+//            listFreeAgents1.addAll(listAgents1);
+//            listFreeAgents2.addAll(listAgents2);
             if (++dayIndex < nbDays) {
                 new EndOfDay().schedule(nbHoursPerDay * HOUR);
             } else {
@@ -435,7 +397,7 @@ public class CallCenter {
 
         LinkedList<Agent> listAgents = (agentType == 1) ? listAgents1 : listAgents2;
         double[] businessAverageList = new double[nbDays];
-        
+
         for (int d = 0; d < nbDays; d++) {
 
             for (int a = 0; a < listAgents.size(); a++) {
@@ -453,12 +415,12 @@ public class CallCenter {
         String title = "Histogramme des taux d'occupation moyens par jour des agents de type " + agentType;
         String x_label = "Abscisses";
         String y_label = "Ordonnées";
-        System.out.println(Arrays.toString(data));
+        //System.out.println(Arrays.toString(data));
         HistogramChart chart;
         chart = new HistogramChart(title, x_label, y_label, data);
         HistogramSeriesCollection collec = chart.getSeriesCollection();
         collec.setBins(0, 30);
-        double[] bounds = {0, 1.15, 0, 130};
+        double[] bounds = {0.5, 1, 0, 100};
         chart.setManualRange(bounds);
         chart.view(1000, 1000);
     }
@@ -477,8 +439,10 @@ public class CallCenter {
         int s1, s2;
         s1 = s2 = 0;
 
-        CallCenter cc = new CallCenter(lambda1, lambda2, mu11, mu12, mu21, mu22, nu1, nu2, n1, n2, s, T, n, s1, s2);
-        
+        final double MINUTE = 60.0;
+
+        CallCenter cc = new CallCenter(lambda1 / MINUTE, lambda2 / MINUTE, mu11 / MINUTE, mu12 / MINUTE, mu21 / MINUTE, mu22 / MINUTE, nu1, nu2, n1, n2, s, T, n, s1, s2);
+
         System.out.println(">> Rapport du nombre d'arrivées de type 1 par jour : ");
         System.out.println(cc.arrivalsCollector1.report());
         System.out.println(">> Rapport du nombre d'arrivées de type 2 par jour : ");
@@ -495,9 +459,11 @@ public class CallCenter {
         System.out
                 .println(">> Rapport du nombre d'appels de type 2 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector2.report());
-         
-        System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(1)));
-        System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(2)));
+
+        //System.out.println(Arrays.toString(cc.abandonsCollector1.getArray()));
+
+//        System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(1)));
+//        System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(2)));
         /*
         int day = 200;
         System.out.println("> Jour " + day + " :");
