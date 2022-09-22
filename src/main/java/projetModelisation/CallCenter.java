@@ -14,6 +14,7 @@ import umontreal.ssj.stat.TallyStore;
 public class CallCenter {
 
     RandomVariateGen genArrivalTime1, genArrivalTime2;
+    
 
     RandomVariateGen genServiceTimeC1A1, genServiceTimeC1A2,
             genServiceTimeC2A1, genServiceTimeC2A2;
@@ -28,10 +29,7 @@ public class CallCenter {
     LinkedList<Agent> listAgents2 = new LinkedList<>();
     LinkedList<Agent> listFreeAgents1 = new LinkedList<>();
     LinkedList<Agent> listFreeAgents2 = new LinkedList<>();
-    /*
-     * LinkedList<Agent> listBusyAgents1 = new LinkedList<Agent>();
-     * LinkedList<Agent> listBusyAgents2 = new LinkedList<Agent>();
-     */
+    
     int nArrivals1, nArrivals2;
     TallyStore arrivalsCollector1 = new TallyStore();
     TallyStore arrivalsCollector2 = new TallyStore();
@@ -96,15 +94,12 @@ public class CallCenter {
     private class Agent {
 
         int agentType;
-        ArrayList<Double> listBusyness = new ArrayList<>();
         ArrayList<Call> callsResponded1 = new ArrayList<>();
         ArrayList<Call> callsResponded2 = new ArrayList<>();
+        double[] listBusyness = new double[nbDays];
 
         public Agent(int agentType) {
             this.agentType = agentType;
-            for (int i = 0; i < nbDays; i++) {
-                listBusyness.add(i, 0.0);
-            }
         }
     }
 
@@ -139,7 +134,7 @@ public class CallCenter {
                 Call call = new Call();
                 call.callType = this.type;
                 call.arrivalTime = sim.time();
-                call.patienceTime = genPatienceTime1.nextDouble() * MINUTE;
+                call.patienceTime = genPatienceTime1.nextDouble();
 
                 new Abandon(call).schedule(call.patienceTime);
 
@@ -147,7 +142,6 @@ public class CallCenter {
                     case 1 -> {
                         // an agent 1 took the call
                         Agent agent1 = (Agent) listFreeAgents1.removeFirst();
-                        // listBusyAgents1.add(agent1);
                         agent1.callsResponded1.add(call);
                         call.agentWhoResponded = agent1;
                         call.serviceTime = genServiceTimeC1A1.nextDouble() * MINUTE;
@@ -159,7 +153,6 @@ public class CallCenter {
                     case 2 -> {
                         // an agent 2 took the call
                         Agent agent2 = (Agent) listFreeAgents2.removeFirst();
-                        // listBusyAgents2.add(agent2);
                         agent2.callsResponded1.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC1A2.nextDouble() * MINUTE;
@@ -179,7 +172,7 @@ public class CallCenter {
                 Call call = new Call();
                 call.callType = this.type;
                 call.arrivalTime = sim.time();
-                call.patienceTime = genPatienceTime2.nextDouble() * MINUTE;
+                call.patienceTime = genPatienceTime2.nextDouble();
 
                 new Abandon(call).schedule(call.patienceTime);
 
@@ -199,7 +192,6 @@ public class CallCenter {
                     case 2 -> {
                         // an agent 2 took the call
                         Agent agent2 = (Agent) listFreeAgents2.removeFirst();
-                        // listBusyAgents2.add(agent2);
                         agent2.callsResponded2.add(call);
                         call.agentWhoResponded = agent2;
                         call.serviceTime = genServiceTimeC2A2.nextDouble() * MINUTE;
@@ -254,12 +246,6 @@ public class CallCenter {
         }
     }
 
-    /*
-     * private int getAnotherCall(int agentType) {
-     * // to implement later...
-     * return 0;
-     * }
-     */
     class EndOfCall extends Event {
 
         Call call;
@@ -271,7 +257,7 @@ public class CallCenter {
         @Override
         public void actions() {
             Agent agent = this.call.agentWhoResponded;
-            agent.listBusyness.set(dayIndex, agent.listBusyness.get(dayIndex) + this.call.serviceTime);
+            agent.listBusyness[dayIndex] += this.call.serviceTime;
 
             switch (agent.agentType) {
                 case 1 -> {
@@ -380,10 +366,10 @@ public class CallCenter {
         public void actions() {
 
             for (Agent ag1 : listAgents1) {
-                ag1.listBusyness.set(dayIndex, ag1.listBusyness.get(dayIndex) / (nbHoursPerDay * HOUR));
+                ag1.listBusyness[dayIndex] /= (nbHoursPerDay * HOUR);
             }
             for (Agent ag2 : listAgents2) {
-                ag2.listBusyness.set(dayIndex, ag2.listBusyness.get(dayIndex) / (nbHoursPerDay * HOUR));
+                ag2.listBusyness[dayIndex] /= (nbHoursPerDay * HOUR);
             }
 
             arrivalsCollector1.add(nArrivals1);
@@ -442,50 +428,37 @@ public class CallCenter {
 
     public double[] getBusynessByAgentAndType(int agentType, int numAgent) {
         LinkedList<Agent> agents = (agentType == 1) ? listAgents1 : listAgents2;
-        return agents.get(numAgent - 1).listBusyness.stream().mapToDouble(Double::doubleValue).toArray();
+        return agents.get(numAgent - 1).listBusyness;
     }
 
     public double[] getBusynessAverageByAgentType(int agentType) {
 
         LinkedList<Agent> listAgents = (agentType == 1) ? listAgents1 : listAgents2;
-
         double[] businessAverageList = new double[nbDays];
-
-        double moy;
-
+        
         for (int d = 0; d < nbDays; d++) {
-            double sum = 0.0;
 
             for (int a = 0; a < listAgents.size(); a++) {
-                businessAverageList[d] += listAgents.get(a).listBusyness.get(d);
+                businessAverageList[d] += listAgents.get(a).listBusyness[d];
             }
 
             businessAverageList[d] /= listAgents.size();
-
-//            moy = listAgents.get(i).listBusyness
-//                    .stream()
-//                    .mapToDouble(a -> a)
-//                    .average()
-//                    .getAsDouble();
-//            sum += moy;
-            //System.out.println("- Agent " + (i + 1) + " : " + moy +" - C1: "+listAgents.get(i).callsResponded1.size()+ " - C2: "+listAgents.get(i).callsResponded2.size());
         }
-        //System.out.println("-- moyenne du groupe " + agentType + " : " + sum / listAgents.size());
         return businessAverageList;
     }
 
     // print histograms
     private void printHistogram(int agentType) {
         double[] data = getBusynessAverageByAgentType(agentType);
-        String title = "Histogramme des taux d'occupation moyens par jour des agents de type "+agentType;
+        String title = "Histogramme des taux d'occupation moyens par jour des agents de type " + agentType;
         String x_label = "Abscisses";
         String y_label = "Ordonnées";
         System.out.println(Arrays.toString(data));
         HistogramChart chart;
         chart = new HistogramChart(title, x_label, y_label, data);
         HistogramSeriesCollection collec = chart.getSeriesCollection();
-        collec.setBins(0, 80);
-        double[] bounds = {0, 1.15, 0, 120};
+        collec.setBins(0, 30);
+        double[] bounds = {0, 1.15, 0, 130};
         chart.setManualRange(bounds);
         chart.view(1000, 1000);
     }
@@ -502,10 +475,10 @@ public class CallCenter {
         int n = 1000;
 
         int s1, s2;
-        s1=s2=0;
+        s1 = s2 = 0;
 
         CallCenter cc = new CallCenter(lambda1, lambda2, mu11, mu12, mu21, mu22, nu1, nu2, n1, n2, s, T, n, s1, s2);
-        /*
+        
         System.out.println(">> Rapport du nombre d'arrivées de type 1 par jour : ");
         System.out.println(cc.arrivalsCollector1.report());
         System.out.println(">> Rapport du nombre d'arrivées de type 2 par jour : ");
@@ -522,7 +495,7 @@ public class CallCenter {
         System.out
                 .println(">> Rapport du nombre d'appels de type 2 répondus en moins de " + s + " secondes par jour : ");
         System.out.println(cc.goodWaitingTimesCollector2.report());
-         */
+         
         System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(1)));
         System.out.println(Arrays.toString(cc.getBusynessAverageByAgentType(2)));
         /*
